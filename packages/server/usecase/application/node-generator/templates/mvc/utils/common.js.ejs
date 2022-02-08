@@ -1,0 +1,162 @@
+/**
+ * common.js
+ * @description: exports helper methods for project.
+ */
+
+<%_if(IS_AUTH && ROLE_PERMISSION){ _%>
+const mongoose = require('mongoose');
+const UserRole = require('../model/userRole');
+const RouteRole = require('../model/routeRole');
+<%_}_%>
+<%_if(IS_AUTH){ _%>
+const dbService = require('./dbService');
+<%_}_%>
+
+/**
+ * convertObjectToEnum : converts object to enum
+ * @param {obj} obj : object to be converted
+ * @return {array} : converted array
+ */
+function convertObjectToEnum (obj) {
+  const enumArr = [];
+  Object.values(obj).map((val) => enumArr.push(val));
+  return enumArr;
+}
+
+/**
+ * randomNumber : generate random numbers for given length
+ * @param {number} length : length of random number to be generated (default 4)
+ * @return {number} : generated random number
+ */
+function randomNumber (length = 4) {
+  const numbers = '12345678901234567890';
+  let result = '';
+  for (let i = length; i > 0; i -= 1) {
+    result += numbers[Math.round(Math.random() * (numbers.length - 1))];
+  }
+  return result;
+};
+
+/**
+ * replaceAll: find and replace all occurrence of a string in a searched string
+ * @param {string} string  : string to be replace
+ * @param {string} search  : string which you want to replace
+ * @param {string} replace : string with which you want to replace a string
+ * @return {string} : replaced new string
+ */
+function replaceAll (string, search, replace) { 
+  return string.split(search).join(replace); 
+}
+
+<%_if(IS_AUTH){ _%>
+/**
+ * uniqueValidation: check unique validation while user registration
+ * @param {obj} model : mongoose model instance of collection
+ * @param {obj} data : data, coming from request
+ * @return {boolean} : validation status
+ */
+async function uniqueValidation (Model,data){
+    <%_if (LOGIN_WITH.length > 1) {_%>
+    let filter = {$or:[]};
+    <%_for(let i in LOGIN_WITH){_%>
+    if(data && data["<%-LOGIN_WITH[i]%>"]){
+        filter['$or'].push(
+        <%_for(let j in LOGIN_WITH){_%>
+        {"<%-LOGIN_WITH[j]%>":data["<%-LOGIN_WITH[i]%>"]},
+        <%_}_%>
+        )
+    }
+    <%_}_%>
+    <%_} else {_%>
+    let filter = {};
+    if(data && data["<%-LOGIN_WITH[0]%>"]){
+        filter = { "<%-LOGIN_WITH[0]%>": data["<%-LOGIN_WITH[0]%>"] }
+    }
+    <%_}_%>
+    filter.isActive = true;
+    filter.isDeleted = false;
+    let found = await dbService.getDocumentByQuery(Model,filter);
+    if(found){
+        return false;
+    }
+    return true;
+}
+<%_}_%>
+
+<%_if(IS_AUTH){_%>
+/**
+ * getDifferenceOfTwoDatesInTime : get difference between two dates in time
+ * @param {date} currentDate  : current date
+ * @param {date} toDate  : future date
+ * @return {string} : difference of two date in time
+ */
+function getDifferenceOfTwoDatesInTime(currentDate,toDate){
+  let hours = toDate.diff(currentDate,'hour');
+  currentDate =  currentDate.add(hours, 'hour');
+  let minutes = toDate.diff(currentDate,'minute');
+  currentDate =  currentDate.add(minutes, 'minute');
+  let seconds = toDate.diff(currentDate,'second');
+  currentDate =  currentDate.add(seconds, 'second');
+  if (hours){
+    return `${hours} hour, ${minutes} minute and ${seconds} second`; 
+  }
+  return `${minutes} minute and ${seconds} second`; 
+}
+<%_}_%>
+
+<%_if(IS_AUTH && ROLE_PERMISSION){ _%>
+/** 
+ * getRoleAccessData: returns role access of User
+ * @param {objectId} userId : id of user to find role data
+ * @return {obj} : user's role access for APIs of model
+ */
+async function getRoleAccessData (userId) {
+  let userRole = await dbService.getAllDocuments(UserRole, { userId: userId },{pagination:false});
+  let routeRole = await dbService.getAllDocuments(RouteRole, { roleId: { $in: userRole.data ? userRole.data.map(u=>u.roleId) : [] } },{ pagination:false,populate:['roleId','routeId'] });
+  let models = mongoose.modelNames();
+  let Roles = routeRole.data ? routeRole.data.map(rr => rr.roleId && rr.roleId.name).filter((value, index, self) => self.indexOf(value) === index) : [];
+  let roleAccess = {};
+  if (Roles.length){
+    Roles.map(role => {
+      roleAccess[role] = {};
+      models.forEach(model => {
+        if (routeRole.data && routeRole.data.length) {
+          routeRole.data.map(rr => {
+            if (rr.routeId && rr.routeId.uri.includes(`/${model.toLowerCase()}/`) && rr.roleId && rr.roleId.name === role) {
+              if (!roleAccess[role][model]) {
+                roleAccess[role][model] = [];
+              }
+              if (rr.routeId.uri.includes('create') && !roleAccess[role][model].includes('C')) {
+                roleAccess[role][model].push('C');
+              }
+              else if (rr.routeId.uri.includes('list') && !roleAccess[role][model].includes('R')) {
+                roleAccess[role][model].push('R');
+              }
+              else if (rr.routeId.uri.includes('update') && !roleAccess[role][model].includes('U')) {
+                roleAccess[role][model].push('U');
+              }
+              else if (rr.routeId.uri.includes('delete') && !roleAccess[role][model].includes('D')) {
+                roleAccess[role][model].push('D');
+              }
+            }
+          });
+        }
+      });
+    });
+  }
+  return roleAccess;
+}
+<%_}_%>
+
+module.exports = {
+  convertObjectToEnum,
+  randomNumber,
+  replaceAll,
+  <%_if(IS_AUTH){ _%>
+  uniqueValidation,
+  getDifferenceOfTwoDatesInTime,
+  <%_}_%>
+  <%_if(IS_AUTH && ROLE_PERMISSION){ _%>
+  getRoleAccessData,
+  <%_}_%>
+};

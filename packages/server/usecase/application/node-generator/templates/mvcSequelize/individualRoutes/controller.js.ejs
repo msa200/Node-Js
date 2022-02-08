@@ -1,0 +1,99 @@
+/**
+ * @description :: exports custom route methods.
+ */
+<%_
+if(typeof(UNIQ_TASK_MODELS)!== 'undefined'){
+let models = UNIQ_TASK_MODELS
+for(const model of models){
+_%>
+const <%-model%> = require("../../model/<%-model%>")
+<%_ } }_%>
+<%_if(IS_CQ){_%>
+const {Op} = require("sequelize")
+const customQueryService = require("../../services/customQueryService")
+<%_}_%>
+
+<%_ROUTES.forEach((v,i)=>{_%>
+/** 
+  * @description : <%-v.descriptions%>
+  * @param {obj} req : request for <%-v.functionName%>
+  * @param {obj} res : response for <%-v.functionName%>
+  * @return {obj} : response for <%-v.functionName%>
+  */
+const <%-v.functionName%>=async (req,res)=>{
+try {
+    try {
+        <%_if(typeof(v.queryBuilder) !== "undefined" && v.queryBuilder.length > 0){_%>
+        let combinedOutput={};
+        <%_ for(let i=0;i< v.queryBuilder.length;i++){_%>
+        <%_ if(v.queryBuilder[i].queryMode === "find"){ _%>
+            <%_ if(v.queryBuilder[i].filter){ 
+                v.queryBuilder[i].model = v.queryBuilder[i].model.charAt(0).toUpperCase() + v.queryBuilder[i].model.slice(1);_%>
+            combinedOutput.<%-v.queryBuilder[i].outputVariable%> =  await customQueryService.find(<%-v.queryBuilder[i].model%>,{filter:<%-v.queryBuilder[i].filter%>});
+            <%_}_%>
+        <%_}_%>   
+        <%_}_%>
+        return res.ok({data:combinedOutput});
+        <%_}_%>
+    } catch (error) {
+        return res.failureResponse();
+    }
+}    
+<%_ })_%>
+
+module.exports={
+<%_ROUTES.forEach((v,i)=>{_%>
+    <%- v.functionName %>,
+<%_ })_%>    
+}
+<%_
+function printSequelizeFilter(filter) {
+  let mainstr = ""
+  if (typeof filter === typeof {}) {
+    if (filter.length) {
+      mainstr += '['
+      for (let obj of filter) {
+        if (typeof obj === typeof {}) {
+          mainstr+= printSequelizeFilter(obj)
+        } else {
+          mainstr += `${obj}`
+        }
+      }
+      mainstr += ']'
+    } else {
+      for (key in filter) {
+        mainstr += '{'
+        if (typeof filter[key] === typeof {}) {
+          mainstr += `${key}:`
+          mainstr += printSequelizeFilter(filter[key])
+        } else {
+          if(!isNaN(`${filter[key]}`)){ 
+            mainstr += `${key}:${filter[key]}`
+          }else if(filter[key] === true || false){
+            mainstr += `${key}:${filter[key]}`
+          }else{
+            mainstr += `${key}:"${filter[key]}"`
+          }
+        }
+        mainstr += '},'
+      }
+    }
+  } else {
+    mainstr += `${k}:"${filter[k]}"`
+  }
+  return mainstr
+}
+
+function printSequelizeSort(sortObj){
+  const finalSortArray = []
+  for (const [key, value] of Object.entries(sortObj)) {
+    let finalSort = []
+    finalSort.push(key)
+    finalSort.push(value === 1 ? 'ASC' : 'DESC')
+    finalSortArray.push(finalSort)
+  }
+  return finalSortArray;
+}
+_%>
+    
+

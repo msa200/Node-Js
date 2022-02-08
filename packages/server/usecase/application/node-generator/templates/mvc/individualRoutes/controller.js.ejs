@@ -1,0 +1,51 @@
+/**
+ * @description :: exports API action methods
+ */
+
+<%_
+if(typeof(MODEL_PATHS) !== 'undefined' ){
+let models = MODEL_PATHS
+Object.keys(models).forEach(function(key) { _%>
+const <%-key%> = require("<%-models[key]%>")
+<%_ }); } _%>
+<%_ if(typeof(UNIQ_TASK_MODELS)!== 'undefined'){
+let models = UNIQ_TASK_MODELS
+for(const model of models){ _%>
+const <%-model%> = require("../../model/<%-model%>");
+<%_} } _%>    
+
+<%_if(IS_CQ){_%>
+const customQueryService = require("../../services/customQueryService")
+<%_}_%>
+
+<%_ROUTES.forEach((v,i)=>{_%>
+/** 
+  * @description : <%-v.descriptions%>
+  * @param {obj} req : request for <%-v.functionName%>
+  * @param {obj} res : response for <%-v.functionName%>
+  * @return {obj} : response for <%-v.functionName%>
+  */
+const <%-v.functionName%>=async (req,res)=>{
+try {
+    <%_if(typeof(v.queryBuilder) !== "undefined" && v.queryBuilder.length > 0){_%>
+    let combinedOutput={};
+    <%_ for(let i=0;i< v.queryBuilder.length;i++){_%>
+    <%_ if(v.queryBuilder[i].queryMode === "find"){ _%>
+        <%_ if(v.queryBuilder[i].filter){ _%>
+        combinedOutput.<%-v.queryBuilder[i].outputVariable%> =  await customQueryService.find(<%-v.queryBuilder[i].model%>,{filter:<%-JSON.stringify(JSON.parse(v.queryBuilder[i].filter))%>});
+        <%_}_%>
+    <%_}_%>   
+    <%_}_%>
+    return res.ok({data:combinedOutput});
+    <%_}_%>
+} catch (error) {
+  return res.failureResponse();
+}
+}    
+<%_})_%>
+
+module.exports={
+<%_ROUTES.forEach((v,i)=>{_%>
+    <%- v.functionName %>,
+<%_ })_%>    
+}

@@ -1,0 +1,61 @@
+const express = require('express');
+const session = require('express-session');
+const router = express.Router();
+const passport = require('passport');
+
+const {
+  googleStrategy,loginUser 
+} = require('../services/google-login-service');
+const response = require('../utils/response');
+const responseHandler = require('../utils/response/responseHandler');
+
+//google
+googleStrategy(passport);
+
+router.use(passport.initialize());
+
+router.use(session({
+  secret: 'my-secret',
+  resave:true,
+  saveUninitialized:false
+}));
+
+passport.serializeUser(function (user, cb) {
+  cb(null, user);
+});
+
+passport.deserializeUser(function (user, cb) {
+  cb(null, user);
+});
+
+router.get('<%-ERROR_URL%>', (req, res) => {
+  let result = response.badRequest({message:'Login Failed'});
+  responseHandler(res,result);
+});
+
+router.get('/auth/google',passport.authenticate('google', { 
+  scope: ['profile', 'email'],
+  session:false 
+}));
+
+router.get('<%-CALLBACK_URL%>',
+  passport.authenticate('google', { failureRedirect: '<%-ERROR_URL%>' }),
+  function (req,res){
+    loginUser(req.user.email,req.session.platform).then(user=>{
+      if (!user.flag){
+        let result = response.success({message:'Login Successful',data:user.data});
+        responseHandler(res,result);
+      }
+      else {
+        let result = response.badRequest({message:user.data});
+        responseHandler(res,result);
+      }     
+    })
+      .catch(error=>{
+        let result = response.internalServerError();
+        responseHandler(res,result);
+      });
+  }
+);
+
+module.exports = router;

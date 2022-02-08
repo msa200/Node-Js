@@ -1,0 +1,27 @@
+<%_
+let models = UNIQ_TASK_MODELS
+let modelFC=""
+if(models){ _%>
+  <%_ for(const model of models){ _%>
+    const <%-model%>Db = require("<%-DATA_ACCESS_PATH%>/<%-model%>Db")
+  <%_ } _%> 
+<%_ }_%> 
+
+
+<%_ ROUTES.forEach((v,i)=>{ _%>
+  <%_if(typeof(v.model) !== 'undefined' && v.model !== null){_%>
+  const <%-v.functionName%>Usecase = require('<%-USECASE_PATH%>/<%-v.model%>/<%-v.functionName%>')({<%_ if(v.cq_model && v.cq_model.length) { for( let i=0;i< v.cq_model.length;i++) { _%> <%- v.cq_model[i] %>Db, <%_ } }_%>});
+  <%_}else{_%>
+  const <%-v.functionName%>Usecase = require('<%-USECASE_PATH%>/customRoutes/<%-v.functionName%>')({<%_ if(v.cq_model && v.cq_model.length) { for( let i=0;i< v.cq_model.length;i++) { _%> <%- v.cq_model[i] %>Db, <%_ } }_%>});
+  <%_}_%>
+<%_})_%>
+
+const <%-SERVICE_NAME %>Controller = require('./<%-SERVICE_NAME %>');
+
+<%_ ROUTES.forEach((v,i)=>{_%>
+  const <%-v.functionName%> = <%-SERVICE_NAME %>Controller.<%-v.functionName%>(<%-v.functionName%>Usecase);
+<%_})_%>
+
+module.exports = {<%_ROUTES.forEach((v,i)=>{_%>
+  <%-v.functionName%>,
+<%_})_%>}

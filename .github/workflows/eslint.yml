@@ -1,0 +1,18 @@
+name: Check ESLint on Pull Request
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+      - name: installing eslint 
+        run: npm i -g eslint && npm run install --force
+      - name: Fixing Files
+        run: eslint . --ext .js --fix

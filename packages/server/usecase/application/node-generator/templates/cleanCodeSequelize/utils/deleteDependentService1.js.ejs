@@ -1,0 +1,107 @@
+<%_ 
+    const groupBy = function (xs, key) {
+    return xs.reduce(function (rv, x) {
+        (rv[x[key]] = rv[x[key]] || []).push(x);
+        return rv;
+    }, {});
+    };
+
+    let modelDependency = groupBy(DELETE_DEPENDENCY, 'model');
+_%>
+const response = require('../../utils/response');
+
+const getDependencyCount =({<%_ DB_DEPENDENCY_INJECTION.forEach((model) => {_%><%- model %>Db<%_ if(DB_DEPENDENCY_INJECTION[DB_DEPENDENCY_INJECTION.length - 1] != model ){%>,<%_} }); %>})=> async (filter) =>{
+    <%_if(DELETE_DEPENDENCY && DELETE_DEPENDENCY.length){_%>
+        let <%-MODEL_NAME%> = await <%-MODEL_NAME%>Db.findMany(filter, {id:1});
+        if(<%-MODEL_NAME%>.length){
+            let <%-MODEL_NAME%>Ids = <%-MODEL_NAME%>.map((obj) => obj.id);
+            <%_ 
+                
+                for (modelName in modelDependency) {
+                    const modelDbName = modelName + 'Db';
+                    const modelFilterName = `${modelName}Filter`;
+                    let filterKeyArray = [];
+                    (modelDependency[modelName]).forEach((element) => {
+                    filterKeyArray.push(element.refId)
+                    });_%>
+
+                const <%-modelFilterName%> = {"$or": [{<%_filterKeyArray.forEach((element, index) => {_%><%-element%> : {"$in" : <%-MODEL_NAME%>Ids } <%_if( index+1 !== filterKeyArray.length ){ _%> },{ <%_ } _%>
+                    <%_ })  _%>  }]}
+                    const <%-modelName%>Cnt =  await <%-modelDbName%>.count(<%-modelFilterName%>);
+                <%_  }
+            _%>
+                let result = { <%_  for (modelName in modelDependency) {  _%> <%-modelName%> : <%-modelName%>Cnt,  <%_  }  _%>}
+                return result;
+        }else{
+            return {  <%-MODEL_NAME%> : 0};
+        }
+    <%_}else{_%>
+    const <%-MODEL_NAME%>Cnt =  await <%-MODEL_NAME%>Db.count(filter);
+    return {<%-MODEL_NAME%> : <%-MODEL_NAME%>Cnt}
+    <%_}_%>
+}
+
+const deleteWithDependency =({<%_ DB_DEPENDENCY_INJECTION.forEach((model) => {_%><%- model %>Db<%_ if(DB_DEPENDENCY_INJECTION[DB_DEPENDENCY_INJECTION.length - 1] != model ){%>,<%_} }); %>})=> async (filter) =>{
+    <%_if(DELETE_DEPENDENCY && DELETE_DEPENDENCY.length){_%>
+        let <%-MODEL_NAME%> = await <%-MODEL_NAME%>Db.findMany(filter, {id:1});
+        if(<%-MODEL_NAME%>.length){
+            let <%-MODEL_NAME%>Ids = <%-MODEL_NAME%>.map((obj) => obj.id);
+            <%_ 
+                
+                for (modelName in modelDependency) {
+                    const modelDbName = modelName + 'Db';
+                    const modelFilterName = `${modelName}Filter`;
+                    let filterKeyArray = [];
+                    (modelDependency[modelName]).forEach((element) => {
+                    filterKeyArray.push(element.refId)
+                    });_%>
+
+                const <%-modelFilterName%> = {"$or": [{<%_filterKeyArray.forEach((element, index) => {_%><%-element%> : {"$in" : <%-MODEL_NAME%>Ids } <%_if( index+1 !== filterKeyArray.length ){ _%> },{ <%_ } _%>
+                    <%_ })  _%>  }]}
+                    await <%-modelDbName%>.deleteMany(<%-modelFilterName%>);
+                <%_  }
+            _%>
+
+                let result = await <%-MODEL_NAME%>Db.deleteMany(filter);
+                return response.success({data :result });
+        }else{
+            return response.badRequest({message :"No <%-MODEL_NAME%> found." });
+        }
+    <%_}else{_%>
+    let result =  await <%-MODEL_NAME%>Db.deleteMany(filter);
+    return response.success({data :result });
+    <%_}_%>
+}
+
+const softDeleteWithDependency =({<%_ DB_DEPENDENCY_INJECTION.forEach((model) => {_%><%- model %>Db<%_ if(DB_DEPENDENCY_INJECTION[DB_DEPENDENCY_INJECTION.length - 1] != model ){%>,<%_} }); %>}) => async (filter,updateBody) =>{
+    <%_if(DELETE_DEPENDENCY && DELETE_DEPENDENCY.length){_%>
+        let <%-MODEL_NAME%> = await <%-MODEL_NAME%>Db.findMany(filter, {id:1});
+        if(<%-MODEL_NAME%>.length){
+            let <%-MODEL_NAME%>Ids = <%-MODEL_NAME%>.map((obj) => obj.id);
+            <%_ 
+                
+                for (modelName in modelDependency) {
+                    const modelDbName = modelName + 'Db';
+                    const modelFilterName = `${modelName}Filter`;
+                    let filterKeyArray = [];
+                    (modelDependency[modelName]).forEach((element) => {
+                    filterKeyArray.push(element.refId)
+                    });_%>
+
+                const <%-modelFilterName%> = {"$or": [{<%_filterKeyArray.forEach((element, index) => {_%><%-element%> : {"$in" : <%-MODEL_NAME%>Ids } <%_if( index+1 !== filterKeyArray.length ){ _%> },{ <%_ } _%>
+                    <%_ })  _%>  }]}
+                    await <%-modelDbName%>.updateMany(<%-modelFilterName%>,updateBody);
+                <%_  }
+            _%>
+
+                let result = await <%-MODEL_NAME%>Db.updateMany(filter,updateBody);
+                return response.success({data : result});
+        }else{
+            return response.badRequest({message : "No <%-MODEL_NAME%> found."});
+        }
+    <%_}else{_%>
+    let result = await <%-MODEL_NAME%>.updateMany(filter,updateBody);
+    return response.success({data : result});
+    <%_}_%>
+}
+module.exports = {getDependencyCount, deleteWithDependency,softDeleteWithDependency}

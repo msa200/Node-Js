@@ -1,0 +1,58 @@
+const response = require('../../../utils/response'); 
+
+const register = (registerUsecase) => async (data) => {
+    try{
+        return await registerUsecase(data);
+    }catch (error) {
+        return response.internalServerError();
+    }
+}
+
+const forgotPassword = (forgotPasswordUsecase) => async (data) => {
+    try{
+        return await forgotPasswordUsecase(data);
+    } catch (error) {
+        return response.internalServerError();
+    }
+}
+    
+const validateResetPasswordOtp = (validateResetPasswordOtpUsecase) => async (data) => {
+    try{
+        return await validateResetPasswordOtpUsecase(data);
+    } catch (error) {
+        return response.internalServerError();
+    }
+}
+    
+const resetPassword = (resetPasswordUsecase) => async (data) => {
+    try {
+        return await resetPasswordUsecase(data);
+    } catch (error) {
+        return response.internalServerError();
+    }
+}
+const authentication = (authenticationUsecase) => async (data, url)=>{
+    try {
+        return await authenticationUsecase(data, url);
+    } catch (error) {
+        return response.internalServerError();
+    }
+}
+
+const logout = (logoutUsecase) => async (user, token) => {
+    try {
+        token = token.replace('Bearer ', '');
+        return await logoutUsecase(user, token);
+    } catch (error) {
+        return response.internalServerError();
+    }
+}
+
+module.exports={
+    register,
+    authentication,
+    forgotPassword,
+    resetPassword,
+    validateResetPasswordOtp,
+    logout
+};

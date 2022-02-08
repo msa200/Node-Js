@@ -1,0 +1,24 @@
+module.exports = (<%-ENTITY_NAME-%>) => {
+
+    let new<%-ENTITY_NAME_FC-%> = { 
+        <%_ for(const key of ENTITY_KEYS){ _%>
+                <%-key%>: <%-ENTITY_NAME-%>.<%-key%>,
+        <%_} _%>  
+    };
+
+    // remove undefined values
+    Object.keys(new<%-ENTITY_NAME_FC-%>).forEach(key =>{ 
+        if(new<%-ENTITY_NAME_FC-%>[key] === undefined) return new<%-ENTITY_NAME_FC-%>[key]=null
+    });
+
+    // To validate Entity uncomment this block
+
+    /* const validate = (new<%-ENTITY_NAME_FC-%>) => {
+         if (!new<%-ENTITY_NAME_FC-%>.field) {
+             throw new Error("this field is required");
+         }
+    }
+    
+    validate(new<%-ENTITY_NAME_FC-%>) */
+    return Object.freeze(new<%-ENTITY_NAME_FC-%>);
+}
